@@ -1,6 +1,6 @@
 import { env, pipeline, type TextGenerationPipeline } from '@huggingface/transformers';
 import { toError } from './errors';
-import { DEFAULT_MODEL } from './model-registry';
+import { getSelectedModel } from '../storage/model-preference';
 import type { DocumentSchema } from '../storage/schema-store';
 import type { ModelDownloadProgress, StructureResult } from '../messaging/protocol';
 
@@ -38,32 +38,39 @@ wasmEnv.proxy = false;
 export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
 let generatorPromise: Promise<TextGenerationPipeline> | null = null;
+let loadedModelId: string | null = null;
 
-function broadcastProgress(loaded: number, total: number): void {
-  const message: ModelDownloadProgress = {
-    type: 'model/download-progress',
-    modelId: DEFAULT_MODEL.id,
-    loaded,
-    total,
-  };
+function broadcastProgress(modelId: string, loaded: number, total: number): void {
+  const message: ModelDownloadProgress = { type: 'model/download-progress', modelId, loaded, total };
   // Fire-and-forget: nothing is listening if no popup/options page happens
   // to be open, and that's fine — this is a progress hint, not a request.
   browser.runtime.sendMessage(message).catch(() => {});
 }
 
-function getGenerator(): Promise<TextGenerationPipeline> {
-  generatorPromise ??= pipeline('text-generation', DEFAULT_MODEL.repoId, {
+/** Re-reads the selected model on every call (cheap — one storage read) so
+ * a change made in settings takes effect on the next request without
+ * needing the offscreen document/background page to restart. Only rebuilds
+ * the actual pipeline when the selection has changed since it was loaded. */
+async function getGenerator(): Promise<TextGenerationPipeline> {
+  const model = await getSelectedModel();
+  if (generatorPromise && loadedModelId === model.id) {
+    return generatorPromise;
+  }
+
+  loadedModelId = model.id;
+  generatorPromise = pipeline('text-generation', model.repoId, {
     dtype: 'q4',
     device: 'wasm',
     progress_callback: (info) => {
       if (info.status === 'progress_total') {
-        broadcastProgress(info.loaded, info.total);
+        broadcastProgress(model.id, info.loaded, info.total);
       }
     },
   }).catch((cause) => {
     // Don't leave a rejected promise cached — a transient download/init
     // failure would otherwise permanently break every future request.
     generatorPromise = null;
+    loadedModelId = null;
     throw toError('Tiny LLM initialization failed', cause);
   });
   return generatorPromise;

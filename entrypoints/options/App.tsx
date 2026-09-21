@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { MODEL_REGISTRY } from '../../lib/inference/model-registry';
+import { getSelectedModelId, setSelectedModelId } from '../../lib/storage/model-preference';
 import {
   deleteSchema,
   listSchemas,
@@ -25,11 +27,11 @@ function toDraft(schema: DocumentSchema): { name: string; fields: SchemaField[] 
 
 /**
  * Options page: schema builder (field name/type/description), stored via
- * lib/storage/schema-store.ts. The popup's schema picker reads whatever is
- * saved here to decide what JSON shape to ask the tiny LLM for.
- *
- * Not yet implemented: model selection/download management (Phase 2 wired
- * the download itself, but not a settings UI for picking between models).
+ * lib/storage/schema-store.ts, plus a picker for which tiny LLM to use for
+ * structuring/matching. The popup's schema picker reads whatever schemas
+ * are saved here; lib/inference/structuring.ts reads the model choice on
+ * every request (see getSelectedModel), so picking a new one here takes
+ * effect on the next capture without needing to reload the extension.
  */
 export default function App() {
   const [schemas, setSchemas] = useState<DocumentSchema[]>([]);
@@ -37,6 +39,7 @@ export default function App() {
   const [draft, setDraft] = useState(emptyDraft());
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [modelId, setModelId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setSchemas(await listSchemas());
@@ -45,6 +48,15 @@ export default function App() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    void getSelectedModelId().then(setModelId);
+  }, []);
+
+  const onSelectModel = useCallback(async (id: string) => {
+    setModelId(id);
+    await setSelectedModelId(id);
+  }, []);
 
   const selectSchema = useCallback((schema: DocumentSchema) => {
     setSelectedId(schema.id);
@@ -126,7 +138,32 @@ export default function App() {
 
   return (
     <main className="options-main">
-      <h1>OCR Form Filler — Schemas</h1>
+      <h1>OCR Form Filler — Settings</h1>
+      <section className="model-picker">
+        <h2>Extraction model</h2>
+        <p className="hint">
+          Runs entirely in your browser — switching models downloads the new one on its
+          first use (cached afterward) and takes effect on your next capture, no reload
+          needed.
+        </p>
+        <div className="model-options">
+          {MODEL_REGISTRY.map((model) => (
+            <label key={model.id} className={`model-option${modelId === model.id ? ' active' : ''}`}>
+              <input
+                type="radio"
+                name="model"
+                value={model.id}
+                checked={modelId === model.id}
+                onChange={() => void onSelectModel(model.id)}
+              />
+              <span className="model-label">{model.label}</span>
+              <span className="model-size">~{model.approxSizeMb} MB</span>
+            </label>
+          ))}
+        </div>
+      </section>
+
+      <h2>Schemas</h2>
       <p className="hint">
         Define the fields you want extracted from a document (name, type, and a short
         description the tiny LLM uses to find the right value). Schemas you save here
