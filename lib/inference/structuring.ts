@@ -22,15 +22,18 @@ import type { ModelDownloadProgress, StructureResult } from '../messaging/protoc
 // onnxruntime-web defaults to fetching its own WASM runtime from a CDN,
 // which both violates MV3's no-remote-code rule and breaks offline use —
 // point it at the copy vendored into public/onnx-wasm instead.
-env.backends.onnx.wasm.wasmPaths = {
+// Transformers.js types `env.backends.onnx` as Partial<Env>, but it's
+// always populated by the library itself at import time.
+const wasmEnv = env.backends.onnx.wasm!;
+wasmEnv.wasmPaths = {
   wasm: browser.runtime.getURL('/onnx-wasm/ort-wasm-simd-threaded.wasm'),
   mjs: browser.runtime.getURL('/onnx-wasm/ort-wasm-simd-threaded.mjs'),
 };
 // Multi-threaded WASM needs SharedArrayBuffer, which needs cross-origin
 // isolation (COOP/COEP) headers this extension doesn't set up — force
 // single-threaded execution rather than let it fail at runtime.
-env.backends.onnx.wasm.numThreads = 1;
-env.backends.onnx.wasm.proxy = false;
+wasmEnv.numThreads = 1;
+wasmEnv.proxy = false;
 
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 

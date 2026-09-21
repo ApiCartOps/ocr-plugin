@@ -59,11 +59,10 @@ function App() {
           schemaId: useDemoSchema ? DEMO_INVOICE_SCHEMA.id : undefined,
         };
         const response = (await browser.runtime.sendMessage(request)) as StructureResult;
-        setStructuredText(
-          'cleanedText' in response.data
-            ? response.data.cleanedText
-            : JSON.stringify(response.data, null, 2),
-        );
+        const { data } = response;
+        const cleanedText =
+          'cleanedText' in data && typeof data.cleanedText === 'string' ? data.cleanedText : null;
+        setStructuredText(cleanedText ?? JSON.stringify(data, null, 2));
       } catch (err) {
         setError(String(err));
       } finally {

@@ -1,6 +1,4 @@
 import { cropScreenshotToPng, type Rect } from '../lib/inference/image';
-import { recognizeText } from '../lib/inference/ocr';
-import { structure } from '../lib/inference/structuring';
 import { renderResultOverlay } from '../lib/ui/result-overlay';
 import { arrayBufferToBase64, base64ToArrayBuffer } from '../lib/messaging/binary';
 import { DEMO_INVOICE_SCHEMA, getSchema, type DocumentSchema } from '../lib/storage/schema-store';
@@ -48,6 +46,10 @@ async function runOcr(bytes: ArrayBuffer, mimeType: string): Promise<OcrResult> 
   const requestId = crypto.randomUUID();
 
   if (import.meta.env.FIREFOX) {
+    // Dynamic import so Tesseract.js isn't statically bundled into
+    // background.js on Chrome/Edge, where this path never runs (OCR goes
+    // through the offscreen document there instead).
+    const { recognizeText } = await import('../lib/inference/ocr');
     return recognizeText(bytes, mimeType, requestId);
   }
 
@@ -79,6 +81,9 @@ async function runStructure(rawText: string, schemaId: string | undefined): Prom
   const schema = await resolveSchema(schemaId);
 
   if (import.meta.env.FIREFOX) {
+    // Dynamic import so Transformers.js isn't statically bundled into
+    // background.js on Chrome/Edge — see the matching note in runOcr.
+    const { structure } = await import('../lib/inference/structuring');
     return structure(rawText, requestId, schema);
   }
 
