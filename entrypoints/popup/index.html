@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Without this, Chrome auto-dark-themes the popup (inverting colors
+         on elements that don't set their own explicit color+background
+         pair) rather than respecting our light-only design. -->
+    <meta name="color-scheme" content="light" />
+    <title>OCR Form Filler</title>
+    <meta name="manifest.type" content="browser_action" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

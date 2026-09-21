@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Chrome offscreen documents don't exist on Firefox, which runs
+         inference directly in its persistent background event page
+         instead. Restrict this unlisted page to Chromium targets. -->
+    <meta name="wxt.include" content="['chrome', 'edge']" />
+    <title>OCR Form Filler — offscreen</title>
+  </head>
+  <body>
+    <script type="module" src="./offscreen/main.ts"></script>
+  </body>
+</html>

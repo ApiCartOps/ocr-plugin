@@ -1,0 +1,185 @@
+#root {
+  width: 320px;
+  padding: 16px;
+  font-family: system-ui, sans-serif;
+  /* Without this, Chrome renders the popup in its dark-mode default (dark
+     background, white text) while our light-gray boxes below stay fixed,
+     making their text unreadable. */
+  color-scheme: light;
+  background: #fff;
+  color: #111;
+}
+
+h1 {
+  font-size: 15px;
+  margin: 0 0 12px;
+  color: #111;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  background: #f7f7f7;
+  color: #111;
+  padding: 6px 10px;
+  /* Under Windows Forced Colors (High Contrast) mode, native <button>
+     elements get remapped to system colors regardless of author CSS — this
+     opts out so our explicit light-gray/dark-text styling actually shows,
+     matching how the plain <div>-based .result/.dropzone boxes were
+     unaffected by the same remapping. */
+  forced-color-adjust: none;
+}
+
+button:hover {
+  background: #eee;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.dropzone {
+  border: 2px dashed #c9c9c9;
+  border-radius: 8px;
+  padding: 18px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.dropzone.dragging {
+  border-color: #2b7fff;
+  color: #2b7fff;
+  background: #f0f6ff;
+}
+
+.status {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.status.error {
+  color: #c22;
+}
+
+.result {
+  font-size: 12px;
+  white-space: pre-wrap;
+  background: #f7f7f7;
+  color: #111;
+  border-radius: 6px;
+  padding: 8px;
+  max-height: 220px;
+  overflow: auto;
+  margin-bottom: 12px;
+}
+
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.schema-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #333;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.schema-toggle input {
+  forced-color-adjust: none;
+}
+
+.progress {
+  height: 6px;
+  border-radius: 3px;
+  background: #eee;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-bar {
+  height: 100%;
+  background: #2b7fff;
+  transition: width 0.2s ease;
+}
+
+/* The color-scheme meta tag alone isn't reliably enough to stop Chrome's
+   forced-dark heuristic from repainting this popup — that heuristic
+   specifically targets pages that don't already have dark-mode-aware
+   author styles, so explicitly restating our (unchanged) light colors
+   here is what actually opts us out of it. */
+@media (prefers-color-scheme: dark) {
+  #root {
+    background: #fff;
+    color: #111;
+  }
+
+  h1 {
+    color: #111;
+  }
+
+  button {
+    background: #f7f7f7;
+    color: #111;
+    border-color: #d0d0d0;
+  }
+
+  button:hover {
+    background: #eee;
+  }
+
+  .dropzone {
+    color: #666;
+    border-color: #c9c9c9;
+  }
+
+  .dropzone.dragging {
+    border-color: #2b7fff;
+    color: #2b7fff;
+    background: #f0f6ff;
+  }
+
+  .status {
+    color: #666;
+  }
+
+  .status.error {
+    color: #c22;
+  }
+
+  .result {
+    background: #f7f7f7;
+    color: #111;
+  }
+
+  .section-label {
+    color: #888;
+  }
+
+  .schema-toggle {
+    color: #333;
+  }
+
+  .progress {
+    background: #eee;
+  }
+}
