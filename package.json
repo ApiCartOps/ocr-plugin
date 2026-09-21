@@ -1,6 +1,6 @@
 {
-  "name": "wxt-react-starter",
-  "description": "manifest.json description",
+  "name": "ocr-plugin",
+  "description": "Cross-browser OCR + tiny-LLM extraction extension with schema-driven form autofill.",
   "private": true,
   "version": "0.0.0",
   "type": "module",
