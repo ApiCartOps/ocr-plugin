@@ -35,7 +35,7 @@ wasmEnv.wasmPaths = {
 wasmEnv.numThreads = 1;
 wasmEnv.proxy = false;
 
-type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
+export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
 let generatorPromise: Promise<TextGenerationPipeline> | null = null;
 
@@ -118,26 +118,30 @@ function extractJsonObject(text: string): Record<string, unknown> | null {
   }
 }
 
+/** Runs a chat completion through the (lazily-loaded, shared) tiny LLM.
+ * Exported so lib/autofill/llm-matcher.ts reuses the same loaded model
+ * instance instead of triggering a second ~550MB download/load. */
+export async function runChat(messages: ChatMessage[], maxNewTokens = 512): Promise<string> {
+  const generator = await getGenerator();
+  try {
+    const output = await generator(messages, { max_new_tokens: maxNewTokens, do_sample: false });
+    const result = Array.isArray(output) ? output[0] : output;
+    const generated = result?.generated_text;
+    return typeof generated === 'string'
+      ? generated
+      : ((generated?.at(-1)?.content as string | undefined) ?? '');
+  } catch (cause) {
+    throw toError('Tiny LLM generation failed', cause);
+  }
+}
+
 export async function structure(
   rawText: string,
   requestId: string,
   schema?: DocumentSchema,
 ): Promise<StructureResult> {
-  const generator = await getGenerator();
   const messages = buildMessages(rawText, schema);
-
-  let reply: string;
-  try {
-    const output = await generator(messages, { max_new_tokens: 512, do_sample: false });
-    const result = Array.isArray(output) ? output[0] : output;
-    const generated = result?.generated_text;
-    reply =
-      typeof generated === 'string'
-        ? generated
-        : ((generated?.at(-1)?.content as string | undefined) ?? '');
-  } catch (cause) {
-    throw toError('Tiny LLM generation failed', cause);
-  }
+  const reply = await runChat(messages, 512);
 
   if (!schema) {
     return { type: 'structure/result', requestId, data: { cleanedText: reply.trim() } };

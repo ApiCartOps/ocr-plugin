@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { arrayBufferToBase64 } from '../../lib/messaging/binary';
-import { DEMO_INVOICE_SCHEMA } from '../../lib/storage/schema-store';
+import { DEMO_INVOICE_SCHEMA, listSchemas, type DocumentSchema } from '../../lib/storage/schema-store';
 import type {
+  AutofillMatchRequest,
   ExtensionMessage,
   ModelDownloadProgress,
   OcrFileUploadRequest,
@@ -25,7 +26,9 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [ocrText, setOcrText] = useState<string | null>(null);
   const [structuredText, setStructuredText] = useState<string | null>(null);
-  const [useDemoSchema, setUseDemoSchema] = useState(false);
+  const [structuredData, setStructuredData] = useState<Record<string, unknown> | null>(null);
+  const [schemas, setSchemas] = useState<DocumentSchema[]>([DEMO_INVOICE_SCHEMA]);
+  const [selectedSchemaId, setSelectedSchemaId] = useState('');
   const [modelProgress, setModelProgress] = useState<{ loaded: number; total: number } | null>(
     null,
   );
@@ -43,11 +46,15 @@ function App() {
     return () => browser.runtime.onMessage.removeListener(listener);
   }, []);
 
+  useEffect(() => {
+    void listSchemas().then((custom) => setSchemas([DEMO_INVOICE_SCHEMA, ...custom]));
+  }, []);
+
   const runStructuring = useCallback(
     async (rawText: string) => {
       setModelProgress(null);
       setStatus(
-        useDemoSchema
+        selectedSchemaId
           ? 'Extracting structured fields (first run downloads the model — this can take a while)…'
           : 'Cleaning up text with the tiny LLM (first run downloads the model — this can take a while)…',
       );
@@ -56,13 +63,14 @@ function App() {
           type: 'structure/run',
           requestId: crypto.randomUUID(),
           rawText,
-          schemaId: useDemoSchema ? DEMO_INVOICE_SCHEMA.id : undefined,
+          schemaId: selectedSchemaId || undefined,
         };
         const response = (await browser.runtime.sendMessage(request)) as StructureResult;
         const { data } = response;
         const cleanedText =
           'cleanedText' in data && typeof data.cleanedText === 'string' ? data.cleanedText : null;
         setStructuredText(cleanedText ?? JSON.stringify(data, null, 2));
+        setStructuredData(cleanedText ? null : data);
       } catch (err) {
         setError(String(err));
       } finally {
@@ -70,7 +78,7 @@ function App() {
         setStatus(null);
       }
     },
-    [useDemoSchema],
+    [selectedSchemaId],
   );
 
   const runOcrOnFile = useCallback(
@@ -78,6 +86,7 @@ function App() {
       setError(null);
       setOcrText(null);
       setStructuredText(null);
+      setStructuredData(null);
       setStatus(`Recognizing "${file.name}"…`);
       try {
         const bytes = arrayBufferToBase64(await file.arrayBuffer());
@@ -119,6 +128,26 @@ function App() {
     },
     [runOcrOnFile],
   );
+
+  const runAutofill = useCallback(async () => {
+    if (!structuredData || !selectedSchemaId) return;
+    setError(null);
+    try {
+      const request: AutofillMatchRequest = {
+        type: 'autofill/match',
+        requestId: crypto.randomUUID(),
+        schemaId: selectedSchemaId,
+        extracted: structuredData,
+      };
+      // The review overlay renders on the page itself once background
+      // resolves the match, so — same as region capture — close the popup
+      // out of its way rather than waiting here.
+      void browser.runtime.sendMessage(request);
+      window.close();
+    } catch (err) {
+      setError(String(err));
+    }
+  }, [structuredData, selectedSchemaId]);
 
   const startRegionCapture = useCallback(async () => {
     setError(null);
@@ -184,14 +213,24 @@ function App() {
         Or drop an image here
       </div>
 
-      <label className="schema-toggle">
-        <input
-          type="checkbox"
-          checked={useDemoSchema}
-          onChange={(e) => setUseDemoSchema(e.target.checked)}
-        />
-        Extract as structured Invoice JSON (demo schema)
+      <label className="row">
+        <span>Extract as</span>
+        <select value={selectedSchemaId} onChange={(e) => setSelectedSchemaId(e.target.value)}>
+          <option value="">Cleaned-up text (no schema)</option>
+          {schemas.map((schema) => (
+            <option key={schema.id} value={schema.id}>
+              {schema.name}
+            </option>
+          ))}
+        </select>
       </label>
+      <button
+        type="button"
+        className="link-button"
+        onClick={() => browser.runtime.openOptionsPage()}
+      >
+        Manage schemas
+      </button>
 
       <p>Right-click any image on a page for "OCR this image".</p>
 
@@ -213,9 +252,16 @@ function App() {
       )}
       {structuredText && (
         <>
-          <div className="section-label">{useDemoSchema ? 'Structured JSON' : 'Cleaned text'}</div>
+          <div className="section-label">
+            {selectedSchemaId ? 'Structured JSON' : 'Cleaned text'}
+          </div>
           <div className="result">{structuredText}</div>
         </>
+      )}
+      {structuredData && (
+        <button type="button" className="primary fill-button" onClick={runAutofill}>
+          Fill form on this page
+        </button>
       )}
     </main>
   );

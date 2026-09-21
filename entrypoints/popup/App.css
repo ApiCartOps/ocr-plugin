@@ -94,18 +94,52 @@ button:disabled {
   margin-bottom: 4px;
 }
 
-.schema-toggle {
+.row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 12px;
   color: #333;
-  margin-bottom: 12px;
-  cursor: pointer;
+  margin-bottom: 8px;
 }
 
-.schema-toggle input {
+.row select {
+  flex: 1;
+  padding: 5px 6px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  color: #111;
+  background: #fff;
   forced-color-adjust: none;
+}
+
+.link-button {
+  display: block;
+  border: none;
+  background: transparent;
+  color: #2b7fff;
+  font-size: 12px;
+  padding: 0;
+  margin-bottom: 12px;
+  text-decoration: underline;
+}
+
+.link-button:hover {
+  background: transparent;
+  color: #1a5fd0;
+}
+
+.fill-button {
+  width: 100%;
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+.fill-button:hover {
+  background: #333;
 }
 
 .progress {
@@ -175,8 +209,24 @@ button:disabled {
     color: #888;
   }
 
-  .schema-toggle {
+  .row {
     color: #333;
+  }
+
+  .row select {
+    background: #fff;
+    color: #111;
+    border-color: #d0d0d0;
+  }
+
+  .link-button {
+    color: #2b7fff;
+  }
+
+  .fill-button {
+    background: #111;
+    color: #fff;
+    border-color: #111;
   }
 
   .progress {
