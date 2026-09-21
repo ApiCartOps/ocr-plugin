@@ -86,7 +86,10 @@ function buildMessages(rawText: string, schema?: DocumentSchema): ChatMessage[] 
   }
 
   const fieldLines = schema.fields
-    .map((f) => `- "${f.name}" (${f.type}): ${f.description}`)
+    .map((f) => {
+      const shapeHint = f.type === 'date' ? ' — value must be a plain string, e.g. "2026-09-21"' : '';
+      return `- "${f.name}" (${f.type}${shapeHint}): ${f.description}`;
+    })
     .join('\n');
 
   return [
@@ -94,10 +97,12 @@ function buildMessages(rawText: string, schema?: DocumentSchema): ChatMessage[] 
       role: 'system',
       content:
         "You extract structured data from a document's OCR'd text into a " +
-        'JSON object matching this schema. Use null for any field you ' +
-        "can't find evidence for in the text — never invent a value. " +
-        'Reply with only the JSON object — no commentary, no markdown ' +
-        `code fences.\n\nSchema fields:\n${fieldLines}`,
+        'JSON object matching this schema. Every field\'s value must be a ' +
+        'plain string, number, or boolean as indicated — never a nested ' +
+        'object. Use null for any field you can\'t find evidence for in ' +
+        "the text — never invent a value. Reply with only the JSON " +
+        'object — no commentary, no markdown code fences.\n\n' +
+        `Schema fields:\n${fieldLines}`,
     },
     { role: 'user', content: rawText },
   ];
@@ -118,10 +123,8 @@ function extractJsonObject(text: string): Record<string, unknown> | null {
   }
 }
 
-/** Runs a chat completion through the (lazily-loaded, shared) tiny LLM.
- * Exported so lib/autofill/llm-matcher.ts reuses the same loaded model
- * instance instead of triggering a second ~550MB download/load. */
-export async function runChat(messages: ChatMessage[], maxNewTokens = 512): Promise<string> {
+/** Runs a chat completion through the (lazily-loaded, shared) tiny LLM. */
+async function runChat(messages: ChatMessage[], maxNewTokens = 512): Promise<string> {
   const generator = await getGenerator();
   try {
     const output = await generator(messages, { max_new_tokens: maxNewTokens, do_sample: false });

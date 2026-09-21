@@ -1,11 +1,10 @@
 import { cropScreenshotToPng, type Rect } from '../lib/inference/image';
-import { detectFormFields, type DetectedField } from '../lib/autofill/field-detector';
+import { detectFormFields } from '../lib/autofill/field-detector';
+import { matchFieldsToSchema } from '../lib/autofill/field-matcher';
 import { renderResultOverlay } from '../lib/ui/result-overlay';
 import { arrayBufferToBase64, base64ToArrayBuffer } from '../lib/messaging/binary';
 import { DEMO_INVOICE_SCHEMA, getSchema, type DocumentSchema } from '../lib/storage/schema-store';
 import type {
-  AutofillFieldMapping,
-  AutofillMatchJob,
   AutofillMatchResult,
   ExtensionMessage,
   OcrResult,
@@ -97,30 +96,11 @@ async function runStructure(rawText: string, schemaId: string | undefined): Prom
   return result as StructureResult;
 }
 
-/** Runs the tiny LLM's field↔DOM matching, routing to whichever context
- * actually hosts Transformers.js for this browser — mirrors runStructure. */
-async function runMatch(
-  detected: DetectedField[],
-  extracted: Record<string, unknown>,
-  schema: DocumentSchema,
-): Promise<AutofillFieldMapping[]> {
-  const requestId = crypto.randomUUID();
-
-  if (import.meta.env.FIREFOX) {
-    // Dynamic import — see the matching note in runOcr.
-    const { matchFieldsToSchema } = await import('../lib/autofill/llm-matcher');
-    return matchFieldsToSchema(detected, extracted, schema);
-  }
-
-  await ensureOffscreenDocument();
-  const job: AutofillMatchJob = { type: 'autofill/match-job', requestId, detected, extracted, schema };
-  const result = await browser.runtime.sendMessage(job);
-  return result as AutofillFieldMapping[];
-}
-
-/** Detects fillable fields on the given tab, asks the tiny LLM to map the
- * extracted data onto them, and hands the result to the review overlay —
- * which is the only thing allowed to actually write into the page. */
+/** Detects fillable fields on the given tab, matches the extracted data
+ * onto them by keyword overlap (see lib/autofill/field-matcher.ts — no
+ * LLM/offscreen-document hop needed for this step), and hands the result
+ * to the review overlay, which is the only thing allowed to actually write
+ * into the page. */
 async function runAutofillMatch(
   tabId: number,
   schemaId: string,
@@ -153,7 +133,7 @@ async function runAutofillMatch(
       return { type: 'autofill/match-result', requestId, mappings: [] };
     }
 
-    const mappings = await runMatch(detected, extracted, schema);
+    const mappings = await matchFieldsToSchema(detected, extracted, schema);
 
     // Same known WXT typings gap as the region-capture executeScript call
     // in popup/App.tsx — `files` is restricted to public/ assets, not

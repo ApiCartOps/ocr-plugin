@@ -109,21 +109,6 @@ export interface AutofillMatchResult {
   mappings: AutofillFieldMapping[];
 }
 
-/**
- * Normalized internal job dispatched by the background script to whichever
- * context actually runs the tiny LLM — mirrors StructureRunJob. Background
- * has already run lib/autofill/field-detector.ts's detectFormFields in the
- * target tab (via scripting.executeScript) and resolved the schema before
- * forwarding, so this job only carries plain data.
- */
-export interface AutofillMatchJob {
-  type: 'autofill/match-job';
-  requestId: string;
-  detected: Array<{ domRefId: string; label: string; inputType: string }>;
-  extracted: Record<string, unknown>;
-  schema: import('../storage/schema-store').DocumentSchema;
-}
-
 export interface ModelDownloadProgress {
   type: 'model/download-progress';
   modelId: string;
@@ -139,6 +124,5 @@ export type ExtensionMessage =
   | StructureRunJob
   | StructureResult
   | AutofillMatchRequest
-  | AutofillMatchJob
   | AutofillMatchResult
   | ModelDownloadProgress;

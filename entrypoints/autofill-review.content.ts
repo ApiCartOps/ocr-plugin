@@ -5,7 +5,7 @@ import type { AutofillFieldMapping, AutofillMatchResult, ExtensionMessage } from
 /**
  * Renders the field-mapping review/confirm overlay (in a Shadow DOM root,
  * to avoid CSS collisions with the host page) after
- * lib/autofill/llm-matcher.ts proposes DOM mappings. Nothing is written to
+ * lib/autofill/field-matcher.ts proposes DOM mappings. Nothing is written to
  * the page — see lib/autofill/dom-writer.ts — until the user confirms each
  * mapping here.
  *
