@@ -109,11 +109,6 @@ export interface AutofillMatchResult {
   mappings: AutofillFieldMapping[];
 }
 
-export interface AutofillApply {
-  type: 'autofill/apply';
-  mappings: AutofillFieldMapping[];
-}
-
 export interface ModelDownloadProgress {
   type: 'model/download-progress';
   modelId: string;
@@ -130,5 +125,4 @@ export type ExtensionMessage =
   | StructureResult
   | AutofillMatchRequest
   | AutofillMatchResult
-  | AutofillApply
   | ModelDownloadProgress;

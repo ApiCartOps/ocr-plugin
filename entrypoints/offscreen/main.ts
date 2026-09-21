@@ -10,7 +10,8 @@ import type { ExtensionMessage } from '../../lib/messaging/protocol';
  * worker/model. The background script broadcasts jobs via
  * runtime.sendMessage; this listener picks up only the ones addressed to
  * these stages ('ocr/run', 'structure/run-job') and ignores everything
- * else.
+ * else. Field matching (lib/autofill/field-matcher.ts) has no heavy
+ * dependency and runs directly in background.ts instead.
  */
 browser.runtime.onMessage.addListener((message: ExtensionMessage) => {
   switch (message.type) {
